@@ -1,0 +1,83 @@
+#!/bin/bash -eu
+
+lat="${OPENWEATHER_LATITUDE:-48.3936}"
+lon="${OPENWEATHER_LONGITUDE:-10.0093}"
+units="${OPENWEATHER_UNITS:-metric}"
+lang="${OPENWEATHER_LANG:-de}"
+
+# Fetch JSON data from OpenWeatherMap API
+OpenWeather-dial()
+{
+	# This cache is for reducing the number of API calls
+	local cache=/tmp/kobo-weather.json
+	local cache_duration=5 # minutes
+	if [ -s "$cache" -a -n "$(find "$cache" -type f -mmin -"$cache_duration" 2>/dev/null)" ]; then
+		cat "$cache"
+		return
+	fi
+
+	local url="https://api.openweathermap.org/data/2.5/onecall"
+	local params=(
+		"lat=${lat}"
+		"lon=${lon}"
+		"units=${units}"
+		"lang=${lang}"
+		"exclude=minutely,daily"
+		"appid=${OPENWEATHER_APPID}"
+	)
+	curl -s "${url}?$(IFS='&'; echo "${params[*]}")" | tee "$cache"
+}
+
+OpenWeather-format()
+{
+	local fields=(
+		".dt"
+		".weather[0].id"
+		".temp"
+		".feels_like"
+		".pop"
+		".wind_speed"
+		".weather[0].description"
+	)
+
+	jq -r ".hourly[range(24)] | [$(IFS=,; echo "${fields[*]}")] | @tsv"
+}
+
+weather()
+{
+	local service=OpenWeather
+	$service-dial | $service-format
+}
+
+weather > weather.txt
+
+/usr/bin/gnuplot <<EOF
+set terminal png size 800,300
+set border linewidth 2
+
+set xdata time
+set timefmt "%s"
+set format x "%H:%M"
+set format y2 "%g%%"
+
+set grid xtics lt 0 lw 1 lc rgb "#999999"
+set grid ytics lt 0 lw 1 lc rgb "#999999"
+
+set xtics 4*60*60
+set ytics 2 nomirror
+set y2tics 0,20
+set y2range [0:100]
+
+set offset graph 0, graph 0.03, graph 0.03, graph 0.03
+
+set style line 1 lw 2lc rgb "black"
+set style line 2 lw 1lc rgb "grey90"
+set style fill solid 1.0 border rgb "grey30"
+
+set key left
+
+set output "plot-1.png"
+plot \
+     "weather.txt" using 1:5 title "Regen" axis x1y2       with boxes ls 2, \
+     "weather.txt" using 1:3 title ""      smooth csplines with lines ls 1
+EOF
