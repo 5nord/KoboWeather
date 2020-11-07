@@ -6,7 +6,7 @@ units="${OPENWEATHER_UNITS:-metric}"
 lang="${OPENWEATHER_LANG:-de}"
 
 # Fetch JSON data from OpenWeatherMap API
-OpenWeather-dial()
+OpenWeather-fetch()
 {
 	# This cache is for reducing the number of API calls
 	local cache=/tmp/kobo-weather.json
@@ -28,7 +28,7 @@ OpenWeather-dial()
 	curl -s "${url}?$(IFS='&'; echo "${params[*]}")" | tee "$cache"
 }
 
-OpenWeather-format()
+OpenWeather-hourly()
 {
 	local fields=(
 		".dt"
@@ -43,41 +43,53 @@ OpenWeather-format()
 	jq -r ".hourly[range(24)] | [$(IFS=,; echo "${fields[*]}")] | @tsv"
 }
 
-weather()
+OpenWeather-feel()  { OpenWeather-current "feels_like"; }
+OpenWeather-id()    { OpenWeather-current "weather[0].id"; }
+OpenWeather-pop()   { OpenWeather-current "pop"; }
+OpenWeather-speed() { OpenWeather-current "wind_speed"; }
+OpenWeather-desc()  { OpenWeather-current "weather[0].description"; }
+
+OpenWeather-current() { jq -r ".current | (.$1)"; }
+
+plot()
 {
-	local service=OpenWeather
-	$service-dial | $service-format
+	/usr/bin/gnuplot <<-EOF
+	set terminal png size 800,300
+	set border linewidth 2
+
+	set xdata time
+	set timefmt "%s"
+	set format x "%H:%M"
+	set format y2 "%g%%"
+
+	set grid xtics lt 0 lw 1 lc rgb "#999999"
+	set grid ytics lt 0 lw 1 lc rgb "#999999"
+
+	set xtics 4*60*60
+	set ytics 2 nomirror
+	set y2tics 0,20
+	set y2range [0:100]
+
+	set offset graph 0, graph 0.03, graph 0.03, graph 0.03
+
+	set style line 1 lw 2lc rgb "black"
+	set style line 2 lw 1lc rgb "grey90"
+	set style fill solid 1.0 border rgb "grey30"
+
+	set key left
+
+	plot \
+	     "$1" using 1:5 title "Regen" axis x1y2       with boxes ls 2, \
+	     "$1" using 1:3 title ""      smooth csplines with lines ls 1
+	EOF
 }
 
-weather > weather.txt
+OpenWeather-fetch | OpenWeather-hourly > weather.txt
+OpenWeather-fetch | OpenWeather-feel   > temperature.txt
+OpenWeather-fetch | OpenWeather-pop    > precipitation.txt
+OpenWeather-fetch | OpenWeather-speed  > wind-speed.txt
+OpenWeather-fetch | OpenWeather-desc   > description.txt
 
-/usr/bin/gnuplot <<EOF
-set terminal png size 800,300
-set border linewidth 2
+OpenWeather-fetch | OpenWeather-id
 
-set xdata time
-set timefmt "%s"
-set format x "%H:%M"
-set format y2 "%g%%"
-
-set grid xtics lt 0 lw 1 lc rgb "#999999"
-set grid ytics lt 0 lw 1 lc rgb "#999999"
-
-set xtics 4*60*60
-set ytics 2 nomirror
-set y2tics 0,20
-set y2range [0:100]
-
-set offset graph 0, graph 0.03, graph 0.03, graph 0.03
-
-set style line 1 lw 2lc rgb "black"
-set style line 2 lw 1lc rgb "grey90"
-set style fill solid 1.0 border rgb "grey30"
-
-set key left
-
-set output "plot-1.png"
-plot \
-     "weather.txt" using 1:5 title "Regen" axis x1y2       with boxes ls 2, \
-     "weather.txt" using 1:3 title ""      smooth csplines with lines ls 1
-EOF
+plot "weather.txt" > plot.png
