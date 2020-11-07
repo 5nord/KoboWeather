@@ -10,6 +10,7 @@ clean: ## Remove all artifacts
 	@rm -fv wind-speed.txt
 	@rm -fv description.txt
 	@rm -fv plot.png
+	@rm -rv icon.svg
 
 KoboRoot.tgz: $(shell find rootfs -type f) ## Build a Kobo update (to be placed in .kobo folder of your device)
 	tar czf $@ -C rootfs .

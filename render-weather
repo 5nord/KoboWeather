@@ -49,7 +49,15 @@ OpenWeather-pop()   { OpenWeather-current "pop"; }
 OpenWeather-speed() { OpenWeather-current "wind_speed"; }
 OpenWeather-desc()  { OpenWeather-current "weather[0].description"; }
 
-OpenWeather-current() { jq -r ".current | (.$1)"; }
+OpenWeather-current()
+{
+	jq -r ".current | (.$1)"
+}
+
+OpenWeather-icon()
+{
+	jq -r ".[] | select(.id==$1) | .icon" <OpenWeather-codes.json
+}
 
 plot()
 {
@@ -90,6 +98,6 @@ OpenWeather-fetch | OpenWeather-pop    > precipitation.txt
 OpenWeather-fetch | OpenWeather-speed  > wind-speed.txt
 OpenWeather-fetch | OpenWeather-desc   > description.txt
 
-OpenWeather-fetch | OpenWeather-id
-
+id=$(OpenWeather-fetch | OpenWeather-id)
+ln -fs "icons/wi-$(OpenWeather-icon "$id").svg" icon.svg
 plot "weather.txt" > plot.png
