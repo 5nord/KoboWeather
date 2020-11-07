@@ -28,6 +28,7 @@ OpenWeather-fetch()
 	curl -s "${url}?$(IFS='&'; echo "${params[*]}")" | tee "$cache"
 }
 
+# Query data series of the next 24 hours
 OpenWeather-hourly()
 {
 	local fields=(
@@ -43,22 +44,23 @@ OpenWeather-hourly()
 	jq -r ".hourly[range(24)] | [$(IFS=,; echo "${fields[*]}")] | @tsv"
 }
 
-OpenWeather-feel()  { OpenWeather-current "feels_like"; }
-OpenWeather-id()    { OpenWeather-current "weather[0].id"; }
-OpenWeather-pop()   { OpenWeather-current "pop"; }
-OpenWeather-speed() { OpenWeather-current "wind_speed"; }
-OpenWeather-desc()  { OpenWeather-current "weather[0].description"; }
+OpenWeather-feel()  { OpenWeather-current ".feels_like"; }
+OpenWeather-id()    { OpenWeather-current ".weather[0].id"; }
+OpenWeather-pop()   { OpenWeather-current ".pop"; }
+OpenWeather-speed() { OpenWeather-current ".wind_speed"; }
+OpenWeather-desc()  { OpenWeather-current ".weather[0].description"; }
 
 OpenWeather-current()
 {
-	jq -r ".current | (.$1)"
+	jq -r ".current | ($1)"
 }
 
 OpenWeather-icon()
 {
-	jq -r ".[] | select(.id==$1) | .icon" <OpenWeather-codes.json
+	echo -n "icons/wi-$(jq -r ".[] | select(.id==$(OpenWeather-id)) | .icon" <OpenWeather-codes.json).svg"
 }
 
+# Plot data series from file $1 to stdout
 plot()
 {
 	/usr/bin/gnuplot <<-EOF
@@ -92,12 +94,13 @@ plot()
 	EOF
 }
 
-OpenWeather-fetch | OpenWeather-hourly > weather.txt
-OpenWeather-fetch | OpenWeather-feel   > temperature.txt
-OpenWeather-fetch | OpenWeather-pop    > precipitation.txt
-OpenWeather-fetch | OpenWeather-speed  > wind-speed.txt
-OpenWeather-fetch | OpenWeather-desc   > description.txt
+OpenWeather-fetch  > weather.json
 
-id=$(OpenWeather-fetch | OpenWeather-id)
-ln -fs "icons/wi-$(OpenWeather-icon "$id").svg" icon.svg
+OpenWeather-hourly < weather.json > weather.txt
+OpenWeather-feel   < weather.json > temperature.txt
+OpenWeather-pop    < weather.json > precipitation.txt
+OpenWeather-speed  < weather.json > wind-speed.txt
+OpenWeather-desc   < weather.json > description.txt
+
+ln -fs "$(OpenWeather-icon < weather.json)" icon.svg
 plot "weather.txt" > plot.png

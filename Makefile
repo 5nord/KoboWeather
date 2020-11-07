@@ -5,6 +5,7 @@ all: KoboRoot.tgz ## Build docker image and Kobo update.
 clean: ## Remove all artifacts
 	@rm -fv KoboRoot.tgz
 	@rm -fv weather.txt
+	@rm -fv weather.json
 	@rm -fv temperature.txt
 	@rm -fv precipitation.txt
 	@rm -fv wind-speed.txt
