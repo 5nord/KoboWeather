@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# It starts a telnet server. If there's an executable called KoboWeather in the
+# user partition, then the original Kobo firmware will be killed and the
+# executable will be started.
+
+# Start inetd, so we can login via telnet.
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts
+/usr/sbin/inetd /etc/inetd.conf
+
+# Don't start APP if USB is pluged in.
+if [ -d /sys/devices/platform/usb_host ]; then
+	exit
+fi
+
+# If there's no custom firmware, just return.
+if ! [ -e /mnt/onboard/KoboWeather ]; then
+	exit
+fi
+
+# Give the original firmware some time to start up and then kill it!
+sleep 8
+killall nickel
+killall hindenburg
+
+showpic()
+{
+	if [ -r "$1" ]; then
+	    zcat "$1" | /usr/local/Kobo/pickel showpic
+	    return
+	fi
+
+	local pic="/etc/images/$(/bin/kobo_config.sh 2>/dev/null)-$1.raw.gz"
+	if [ -r "$pic" ]; then
+	    zcat "$pic" | /usr/local/Kobo/pickel showpic
+	fi
+}
+
+showpic ghostbuster
+
+# Run KoboWeather in an infinite loop to "restore" after a crash.
+while true; do
+	sleep 2
+	for i in `seq 0 10`; do
+	    showpic "on-$i"
+	done
+
+	/mnt/onboard/KoboWeather >& /dev/null
+done
