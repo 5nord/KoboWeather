@@ -3,13 +3,13 @@
 In the morning when choosing clothes for my kid, I easily get anoyed by
 clicking through various weather apps, accepting cookies, finding out when it
 will rain, etc.
-The [e-paper project [german])(http://mrks.de/blog/Endlich_E-Paper/35) of a
+The [e-paper project](http://mrks.de/blog/Endlich_E-Paper/35) [german] of a
 friend gave me the template to ease my mornings.
 
 This project provides a weather forecase application for the Kobo Mini. It's
 still much work in progress. This is how it will look like, when it's ready:
 
-<center>![Vision](KoboWeather.png)</center>
+<center>![Vision](https://github.com/5nord/KoboWeather/blob/master/KoboWeather.png?raw=true)</center>
 
 
 # Installing
