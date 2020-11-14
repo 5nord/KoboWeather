@@ -9,7 +9,7 @@ friend gave me the template to ease my mornings.
 This project provides a weather forecase application for the Kobo Mini. It's
 still much work in progress. This is how it will look like, when it's ready:
 
-<center>![Vision](https://github.com/5nord/KoboWeather/blob/master/KoboWeather.png?raw=true)</center>
+<center>![Vision](https://raw.githubusercontent.com/5nord/KoboWeather/master/KoboWeather.png)</center>
 
 
 # Installing
